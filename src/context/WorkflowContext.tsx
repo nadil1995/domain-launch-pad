@@ -17,6 +17,12 @@ type User = {
   name: string;
 };
 
+type EmailAccount = {
+  username: string;
+  password: string;
+  isDefaultAddress: boolean;
+};
+
 type WorkflowStep = 'landing' | 'packages' | 'auth' | 'domain' | 'email' | 'complete';
 
 interface WorkflowContextType {
@@ -28,8 +34,8 @@ interface WorkflowContextType {
   setUser: (user: User | null) => void;
   domain: string;
   setDomain: (domain: string) => void;
-  emailAccounts: string[];
-  setEmailAccounts: (emails: string[]) => void;
+  emailAccounts: EmailAccount[];
+  setEmailAccounts: (emails: EmailAccount[]) => void;
   goToNextStep: () => void;
   goToPreviousStep: () => void;
 }
@@ -43,7 +49,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [domain, setDomain] = useState<string>('');
-  const [emailAccounts, setEmailAccounts] = useState<string[]>([]);
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
 
   const goToNextStep = () => {
     const currentIndex = workflowSteps.indexOf(currentStep);
@@ -88,3 +94,4 @@ export const useWorkflow = (): WorkflowContextType => {
   }
   return context;
 };
+

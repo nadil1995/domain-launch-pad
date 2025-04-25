@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Plus, Trash2, Info, Mail, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
