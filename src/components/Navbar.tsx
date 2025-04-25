@@ -1,12 +1,13 @@
 
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkflow } from '@/context/WorkflowContext';
+import UserMenu from './UserMenu';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { currentStep, setCurrentStep } = useWorkflow();
+  const { currentStep, setCurrentStep, user, setUser } = useWorkflow();
   
   const navItems = [
     { label: 'Features', href: '#features' },
@@ -20,6 +21,15 @@ const Navbar = () => {
 
   const handleGetStarted = () => {
     setCurrentStep('packages');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentStep('landing');
+  };
+
+  const handleLogin = () => {
+    setCurrentStep('auth');
   };
 
   return (
@@ -47,12 +57,26 @@ const Navbar = () => {
           </nav>
           
           <div className="flex items-center space-x-4">
-            <Button 
-              onClick={handleGetStarted}
-              className="hidden md:inline-flex bg-brand-600 hover:bg-brand-700 text-white"
-            >
-              Get Started
-            </Button>
+            {user ? (
+              <UserMenu name={user.name} onLogout={handleLogout} />
+            ) : (
+              <>
+                <Button 
+                  onClick={handleLogin}
+                  variant="ghost"
+                  className="hidden md:inline-flex items-center"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Log in
+                </Button>
+                <Button 
+                  onClick={handleGetStarted}
+                  className="hidden md:inline-flex bg-brand-600 hover:bg-brand-700 text-white"
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
             
             {/* Mobile menu button */}
             <button
@@ -79,15 +103,30 @@ const Navbar = () => {
                 {item.label}
               </a>
             ))}
-            <Button 
-              onClick={() => {
-                handleGetStarted();
-                setMobileMenuOpen(false);
-              }}
-              className="w-full bg-brand-600 hover:bg-brand-700 text-white"
-            >
-              Get Started
-            </Button>
+            {!user && (
+              <>
+                <Button 
+                  onClick={() => {
+                    handleLogin();
+                    setMobileMenuOpen(false);
+                  }}
+                  variant="ghost"
+                  className="w-full justify-center"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Log in
+                </Button>
+                <Button 
+                  onClick={() => {
+                    handleGetStarted();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white"
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
