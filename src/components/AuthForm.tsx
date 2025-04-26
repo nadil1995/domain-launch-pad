@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Facebook, Github, Google } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,6 +88,25 @@ const AuthForm = () => {
     }, 1500);
   };
 
+  const handleSocialLogin = (provider: string) => {
+    setIsLoading(true);
+    
+    // Simulate API request
+    setTimeout(() => {
+      setIsLoading(false);
+      setUser({
+        id: '123',
+        email: `user@${provider}.com`,
+        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`
+      });
+      toast({
+        title: "Logged in successfully",
+        description: `Welcome, ${provider.charAt(0).toUpperCase() + provider.slice(1)} User!`,
+      });
+      goToNextStep();
+    }, 1500);
+  };
+
   return (
     <div className="container-custom py-8 md:py-12">
       <div className="max-w-md mx-auto">
@@ -100,6 +118,47 @@ const AuthForm = () => {
         </div>
         
         <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
+          <div className="space-y-4 mb-6">
+            <Button 
+              onClick={() => handleSocialLogin('google')}
+              variant="outline" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              <Google className="mr-2 h-4 w-4" />
+              Continue with Google
+            </Button>
+            
+            <Button 
+              onClick={() => handleSocialLogin('facebook')}
+              variant="outline"
+              className="w-full"
+              disabled={isLoading}
+            >
+              <Facebook className="mr-2 h-4 w-4" />
+              Continue with Facebook
+            </Button>
+            
+            <Button 
+              onClick={() => handleSocialLogin('github')}
+              variant="outline"
+              className="w-full"
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              Continue with GitHub
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+              </div>
+            </div>
+          </div>
+
           <Tabs defaultValue="login">
             <TabsList className="grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
