@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WorkflowProvider } from "@/context/WorkflowContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Profile from './components/Profile';
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/profile" element={<Profile />} />
+            {/* Add other routes here */}
+            
+            {/* Catch-all route for 404 Not Found */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -28,5 +33,9 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+// src/App.tsx
+
+
+
 
 export default App;

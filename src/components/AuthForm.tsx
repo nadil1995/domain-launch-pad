@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkflow } from '@/context/WorkflowContext';
 import { useToast } from '@/components/ui/use-toast';
+import axios from 'axios';
 
 const AuthForm = () => {
   const { setUser, goToPreviousStep, goToNextStep } = useWorkflow();
@@ -39,27 +40,44 @@ const AuthForm = () => {
     });
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API request
-    setTimeout(() => {
-      setIsLoading(false);
-      setUser({
-        id: '123',
+    try {
+      // Send login request to backend
+      const response = await axios.post('http://localhost:5002/api/auth/login', {
         email: loginData.email,
-        name: loginData.email.split('@')[0]
+        password: loginData.password
       });
+
+      // Store the token after successful login
+      localStorage.setItem('authToken', response.data.token);
+
+      // Set the user in context
+      setUser({
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.name
+      });
+
       toast({
         title: "Logged in successfully",
-        description: `Welcome back, ${loginData.email.split('@')[0]}!`,
+        description: `Welcome back, ${response.data.user.name}!`,
       });
+
       goToNextStep();
-    }, 1500);
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        title: "Login failed",
+        description: "Please check your credentials and try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (registerData.password !== registerData.confirmPassword) {
@@ -73,26 +91,44 @@ const AuthForm = () => {
     
     setIsLoading(true);
     
-    // Simulate API request
-    setTimeout(() => {
-      setIsLoading(false);
-      setUser({
-        id: '123',
+    try {
+      // Send register request to backend
+      const response = await axios.post('http://localhost:5002/api/auth/signup', {
+        name: registerData.name,
         email: registerData.email,
-        name: registerData.name
+        password: registerData.password
       });
+
+      // Store the token after successful registration
+      localStorage.setItem('authToken', response.data.token);
+
+      // Set the user in context
+      setUser({
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.name
+      });
+
       toast({
         title: "Account created",
-        description: `Welcome, ${registerData.name}!`
+        description: `Welcome, ${response.data.user.name}!`,
       });
+
       goToNextStep();
-    }, 1500);
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        title: "Registration failed",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
     setIsLoading(true);
     
-    // Simulate API request
+    // Simulate API request (use actual logic here for OAuth integration)
     setTimeout(() => {
       setIsLoading(false);
       setUser({
