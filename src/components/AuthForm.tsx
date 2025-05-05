@@ -1,24 +1,26 @@
 import { useState } from 'react';
-import { Apple, Twitter } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
+import { Apple, Twitter, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkflow } from '@/context/WorkflowContext';
 import { useToast } from '@/components/ui/use-toast';
+import { auth, googleProvider } from '@/lib/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup
+} from 'firebase/auth';
+
 import axios from 'axios';
 
 const AuthForm = () => {
   const { setUser, goToPreviousStep, goToNextStep } = useWorkflow();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-  
+
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({
     name: '',
     email: '',
@@ -27,59 +29,47 @@ const AuthForm = () => {
   });
 
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLoginData({
-      ...loginData,
-      [e.target.name]: e.target.value
-    });
+    setLoginData({ ...loginData, [e.target.name]: e.target.value });
   };
 
   const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRegisterData({
-      ...registerData,
-      [e.target.name]: e.target.value
-    });
+    setRegisterData({ ...registerData, [e.target.name]: e.target.value });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      // Send login request to backend
-      const response = await axios.post('http://localhost:5002/api/auth/login', {
-        email: loginData.email,
-        password: loginData.password
-      });
+      const userCredential = await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+      const user = userCredential.user;
 
-      // Store the token after successful login
-      localStorage.setItem('authToken', response.data.token);
-
-      // Set the user in context
       setUser({
-        id: response.data.user.id,
-        email: response.data.user.email,
-        name: response.data.user.name
+        id: user.uid,
+        email: user.email || '',
+        name: user.displayName || user.email?.split('@')[0] || 'User'
       });
 
       toast({
         title: "Logged in successfully",
-        description: `Welcome back, ${response.data.user.name}!`,
+        description: `Welcome back!`,
       });
 
       goToNextStep();
-    } catch (error) {
-      setIsLoading(false);
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (registerData.password !== registerData.confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -88,60 +78,75 @@ const AuthForm = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      // Send register request to backend
-      const response = await axios.post('http://localhost:5002/api/auth/signup', {
-        name: registerData.name,
-        email: registerData.email,
-        password: registerData.password
-      });
+      const userCredential = await createUserWithEmailAndPassword(auth, registerData.email, registerData.password);
+      const user = userCredential.user;
 
-      // Store the token after successful registration
-      localStorage.setItem('authToken', response.data.token);
-
-      // Set the user in context
       setUser({
-        id: response.data.user.id,
-        email: response.data.user.email,
-        name: response.data.user.name
+        id: user.uid,
+        email: user.email || '',
+        name: registerData.name
       });
 
       toast({
         title: "Account created",
-        description: `Welcome, ${response.data.user.name}!`,
+        description: `Welcome, ${registerData.name}!`,
       });
 
       goToNextStep();
-    } catch (error) {
-      setIsLoading(false);
+    } catch (error: any) {
       toast({
         title: "Registration failed",
-        description: "Please try again later.",
+        description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
+  const handleSocialLogin = async () => {
     setIsLoading(true);
-    
-    // Simulate API request (use actual logic here for OAuth integration)
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+  
+      // ✅ Get Firebase ID Token
+      const idToken = await user.getIdToken();
+  
+      // ✅ Send it to your backend
+      const response = await axios.post('http://localhost:5003/api/auth/firebase-login', {
+        idToken,
+      });
+  
+      // ✅ Set user context
+      const { user: backendUser } = response.data;
+  
       setUser({
-        id: '123',
-        email: `user@${provider}.com`,
-        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`
+        id: backendUser.id,
+        email: backendUser.email,
+        name: backendUser.name,
       });
+  
       toast({
-        title: "Logged in successfully",
-        description: `Welcome, ${provider.charAt(0).toUpperCase() + provider.slice(1)} User!`,
+        title: 'Logged in successfully',
+        description: `Welcome, ${backendUser.name}!`,
       });
+  
       goToNextStep();
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Login failed',
+        description: 'Google login failed.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -149,45 +154,33 @@ const AuthForm = () => {
       <div className="max-w-md mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Account Access</h1>
-          <p className="text-gray-600">
-            Sign in to your account or create a new one to continue.
-          </p>
+          <p className="text-gray-600">Sign in to your account or create a new one to continue.</p>
         </div>
-        
+
         <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
           <div className="space-y-4 mb-6">
-            <Button 
-              onClick={() => handleSocialLogin('google')}
-              variant="outline" 
+            <Button
+              onClick={handleSocialLogin}
+              variant="outline"
               className="w-full"
               disabled={isLoading}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z"/>
+                <path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81Z" />
               </svg>
               Continue with Google
             </Button>
-            
-            <Button 
-              onClick={() => handleSocialLogin('apple')}
-              variant="outline"
-              className="w-full"
-              disabled={isLoading}
-            >
+
+            <Button variant="outline" className="w-full" disabled>
               <Apple className="mr-2 h-4 w-4" />
-              Continue with Apple
+              Continue with Apple (Coming Soon)
             </Button>
-            
-            <Button 
-              onClick={() => handleSocialLogin('x')}
-              variant="outline"
-              className="w-full"
-              disabled={isLoading}
-            >
+
+            <Button variant="outline" className="w-full" disabled>
               <Twitter className="mr-2 h-4 w-4" />
-              Continue with X
+              Continue with X (Coming Soon)
             </Button>
-            
+
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -203,7 +196,7 @@ const AuthForm = () => {
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <div className="space-y-4">
@@ -219,14 +212,9 @@ const AuthForm = () => {
                       onChange={handleLoginChange}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                      <Button variant="link" className="p-0 h-auto text-xs text-brand-600">
-                        Forgot password?
-                      </Button>
-                    </div>
+                    <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
                       name="password"
@@ -236,18 +224,14 @@ const AuthForm = () => {
                       onChange={handleLoginChange}
                     />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white"
-                    disabled={isLoading}
-                  >
+
+                  <Button type="submit" className="w-full bg-brand-600 text-white" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
                 </div>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="register">
               <form onSubmit={handleRegister}>
                 <div className="space-y-4">
@@ -263,20 +247,19 @@ const AuthForm = () => {
                       onChange={handleRegisterChange}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="registerEmail">Email address</Label>
                     <Input
                       id="registerEmail"
                       name="email"
                       type="email"
-                      placeholder="you@example.com"
                       required
                       value={registerData.email}
                       onChange={handleRegisterChange}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="registerPassword">Password</Label>
                     <Input
@@ -288,7 +271,7 @@ const AuthForm = () => {
                       onChange={handleRegisterChange}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <Input
@@ -300,12 +283,8 @@ const AuthForm = () => {
                       onChange={handleRegisterChange}
                     />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white"
-                    disabled={isLoading}
-                  >
+
+                  <Button type="submit" className="w-full bg-brand-600 text-white" disabled={isLoading}>
                     {isLoading ? "Creating Account..." : "Create Account"}
                   </Button>
                 </div>
@@ -313,7 +292,7 @@ const AuthForm = () => {
             </TabsContent>
           </Tabs>
         </div>
-        
+
         <div className="mt-8 flex justify-between">
           <Button
             onClick={goToPreviousStep}
